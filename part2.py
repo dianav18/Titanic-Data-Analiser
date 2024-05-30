@@ -96,6 +96,31 @@ def train(training_data):
 
     return model  # Returneaza modelul antrenat
 
+def predict(__real_data, model):
+    """
+    Foloseste modelul antrenat pentru a prezice supravietuirea pasagerilor din setul de date de test.
+    :param __real_data: Date reale de test
+    :param model: Modelul antrenat Random Forest Classifier
+    """
+    real_data: pd.DataFrame = __real_data.copy()
+
+    gender_map = {"male": 1, "female": 2}  # Mapare pentru coloana `Sex`
+    embarked_map = {"C": 1, "Q": 2, "S": 3}  # Mapare pentru coloana `Embarked`
+
+    real_data = real_data.drop(["Name", "Ticket", "Cabin"], axis=1)  # Elimina coloanele irelevante
+    real_data["Sex"] = real_data["Sex"].replace(gender_map)  # Transforma valorile categorice in numerice
+    real_data["Embarked"] = real_data["Embarked"].replace(embarked_map)
+
+    real_x = real_data.drop("Survived", axis=1)  # Caracteristicile de test
+    real_y = real_data["Survived"]  # Etichetele de test
+
+    real_predictions = model.predict(real_x)  # Realizeaza predictiile
+
+    accuracy = accuracy_score(real_y, real_predictions)
+    print(f"Accuracy: {accuracy * 100:.2f}%")  # Afiseaza acuratetea predictiilor
+
+    real_data["Survived"] = real_predictions  # Adauga predictiile in datele reale
+    real_data.to_csv(f"RandomForestClassifier_predictions.csv")  # Salveaza predictiile intr-un fisier CSV
 
 
 def main():
@@ -120,6 +145,10 @@ def main():
 
     test_data = pd.merge(test_data, correct_predictions,
                          on="PassengerId")  # Fuzioneaza datele de test cu predictiile corecte
+
+
+    predict(test_data, model)  # Realizeaza predictiile folosind modelul antrenat
+
 
 
 if __name__ == "__main__":
