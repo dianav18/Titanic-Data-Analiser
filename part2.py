@@ -56,6 +56,46 @@ def verify(data):
     data["Age"].hist()  # Afiseaza o histograma a distributiei varstelor
     plt.show()
 
+def train(training_data):
+    """
+    Antreneaza un model Random Forest Classifier folosind datele de antrenament curatate.
+    :param training_data: Date de antrenament curatate
+    :return: Modelul antrenat Random Forest Classifier
+    """
+    model = RandomForestClassifier()
+    training_data = training_data.copy()
+    training_data = training_data.drop(["Name", "Ticket", "Cabin", "Age_z_score"], axis=1)  # Elimina coloanele irelevante
+
+    gender_map = {"male": 1, "female": 2}  # Mapare pentru coloana `Sex`
+    embarked_map = {"C": 1, "Q": 2, "S": 3}  # Mapare pentru coloana `Embarked`
+
+    training_data["Sex"] = training_data["Sex"].replace(gender_map)  # Transforma valorile categorice in numerice
+    training_data["Embarked"] = training_data["Embarked"].replace(embarked_map)
+
+    X = training_data.drop("Survived", axis=1)  # Caracteristicile de antrenament
+    y = training_data["Survived"]  # Etichetele de antrenament
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)  # imparte datele in seturi de antrenament si testare
+
+    model.fit(X_train, y_train)  # Antreneaza modelul
+    training_predictions = model.predict(X_test)  # Realizeaza predictii pe setul de testare
+
+    accuracy = accuracy_score(y_test, training_predictions)
+    print(f"Accuracy: {accuracy * 100:.2f}%")  # Afiseaza acuratetea modelului
+
+    importance = model.feature_importances_  # Importanta caracteristicilor
+    indices = np.argsort(importance)[::-1]
+    names = [X.columns[i] for i in indices]
+
+    plt.figure()
+    plt.title(f"RandomForestClassifier Feature Importance")
+    plt.bar(range(X.shape[1]), importance[indices])
+    plt.xticks(range(X.shape[1]), names, rotation=90)  # Afiseaza importanta caracteristicilor
+    plt.savefig(f"RandomForestClassifier_feature_importance.png")
+    plt.show()
+
+    return model  # Returneaza modelul antrenat
+
 
 
 def main():
@@ -70,6 +110,16 @@ def main():
     data = z_score(data)  # Elimina valorile extreme
 
     verify(data)  # Verifica distributia varstelor dupa curatare
+
+    model = train(data)  # Antreneaza modelul
+    test_data = pd.read_csv("test.csv")
+    correct_predictions = pd.read_csv("gender_submission.csv")
+
+    test_data.set_index("PassengerId", inplace=True)
+    correct_predictions.set_index("PassengerId", inplace=True)
+
+    test_data = pd.merge(test_data, correct_predictions,
+                         on="PassengerId")  # Fuzioneaza datele de test cu predictiile corecte
 
 
 if __name__ == "__main__":
